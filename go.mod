@@ -5,6 +5,8 @@ go 1.25.7
 require (
 	github.com/filecoin-project/go-address v1.2.0 // indirect
 	github.com/filecoin-project/go-crypto v0.1.0 // indirect
+	github.com/filecoin-project/go-fil-commcid v0.3.1 // indirect
+	github.com/filecoin-project/go-fil-commp-hashhash v0.4.0 // indirect
 	github.com/filecoin-project/go-state-types v0.18.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/ipfs/boxo v0.34.0 // indirect
@@ -20,6 +22,7 @@ require (
 	github.com/multiformats/go-base36 v0.2.0 // indirect
 	github.com/multiformats/go-multiaddr v0.16.1 // indirect
 	github.com/multiformats/go-multibase v0.3.0 // indirect
+	github.com/multiformats/go-multicodec v0.10.0 // indirect
 	github.com/multiformats/go-multihash v0.2.3 // indirect
 	github.com/multiformats/go-varint v0.1.0 // indirect
 	github.com/oklog/ulid/v2 v2.1.1 // indirect

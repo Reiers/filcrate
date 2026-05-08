@@ -1,52 +1,85 @@
 # filcrate — build status
 
-Last updated: 2026-05-08
+Last updated: 2026-05-08 (V0.2)
 
-## What works today (V0)
+## What works today
 
-- `filcrate sps probe <miner-address>` — resolves multiaddrs from chain, picks an HTTP base URL, builds a Curio-compatible `CurioAuth` header, queries `/market/mk20/products`, `/sources`, `/contracts`. Pretty-printed or `--json`.
-- `filcrate sps probe-batch <addr>...` — concurrent batch probe with `--concurrency` and `--timeout` flags.
-- `filcrate version` — version info from build tags or Go module info.
-- `--network=calibration` (default) and `--network=mainnet`. Custom RPC via `--rpc <url>`.
-- `--wallet <path>` accepts a hex-encoded 32-byte secp256k1 key. Without it, an ephemeral key is generated for read-only probes.
+### CLI surface
 
-Real-network smoke tests against calibration miners surfaced the expected mix of:
-- Working endpoints (e.g. `temp-calib.devtty.eu` returns a structured response, though it's running an older Curio that returns 500 on auth-fail rather than 401).
-- SPs that advertise libp2p-only multiaddrs (no Mk20 surface).
-- SPs advertising private / `127.0.0.1` multiaddrs (network misconfiguration on their side).
-- Connection refused / DNS / timeout cases.
+```
+filcrate sps probe <miner-address>
+filcrate sps probe-batch <addr>... [--concurrency N] [--timeout S]
+filcrate sps catalog [--top N] [--out file.json] [--json]
+filcrate commp <file> [--json]
+filcrate store <file> --provider <f0...> --tier=<cold|hot> [...]
+filcrate version
+```
 
-The prober reports each cleanly with a `Stage`-tagged error so downstream tooling can render diagnostics.
+Global flags: `--network=calibration|mainnet`, `--rpc <url>`, `--wallet <key-file>`.
 
-## What's verified by tests
+### Verified end-to-end
 
-- secp256k1 signer derives the correct `f1` Filecoin address from a private key.
-- `SignDigest` produces a 65-byte recoverable signature, wrapped in `crypto.Signature{Type: SigTypeSecp256k1}`. EcRecover round-trips back to the original wallet address.
-- `AuthHeader` constructs the exact preimage Curio's SP-side `mk20.Auth` recomputes — `addr.Bytes() || UPPER(method) || requestPath || RFC3339(now truncated to minute)`.
-- `ApplyAuth` uses `req.URL.EscapedPath()` so URL-encoded path segments (e.g. ULID status lookups) match the SP's chi router behavior.
+- **Chain RPC** — `Filecoin.StateMinerInfo` against public Glif endpoints. Multiaddrs parsed, base64-decoded, and converted to HTTP base URLs via `maurl.ToURL`.
+- **CurioAuth header** — preimage matches the exact construction in `curio/market/mk20/auth.go`. Verified via unit test (EcRecover round-trip on the secp256k1 signature recovers our wallet address).
+- **PieceCID v2 (FRC-0069)** — file → `bafkz...` PieceCID via `go-fil-commp-hashhash` + `go-fil-commcid`. Deterministic. Tested with 65-byte minimum.
+- **Deal envelopes** — typed builders for DDO (cold) and PDP (hot) with default retrieval product, ULID identifiers, and validation. Mutual-exclusion checks (HTTP source vs HTTP-PUT source) enforced.
+- **Capability prober** — single-SP and batch-concurrent. Real network responses surfaced: `t0143103` (`REDACTED-SP`), `t0181521` (`temp-calib.devtty.eu`), and others. Errors are `Stage`-tagged (`state_miner_info`, `parse_multiaddrs`, `no_http_multiaddr`, `products`, `sources`, `contracts`).
+- **Catalog crawler** — pulls top-N miners from Filfox (calibration: 7 active SPs returned), batch-probes, persists JSON snapshots. Handles short-page detection (Filfox returns HTTP 500 on out-of-range pagination instead of empty pages).
 
-## What's not done yet
+### Smoke-test results (calibration, 2026-05-08)
 
-- **Deal submission** — `filcrate store ./file.bin` end-to-end. Needs PieceCID v2 computation, deal envelope construction, and chunked or serial upload handling.
-- **DataCap auto-request** — Filplus auto-allocator integration so a "free" cold deal works without the user touching DataCap.
-- **WebUI** — Next.js shell talking to a `filcrated` daemon. Not started.
-- **Hot path** — FoC PDP / Filecoin Pay rails via Synapse SDK or a Go reimpl. Not started.
-- **Wallet flexibility** — only secp256k1 (`f1`) is wired in. Delegated (`f4`) needs an EVM signer adapter.
-- **Installer** — `curl | bash` flow modeled on filbucket. Not written.
-- **Native batch crawl** — top-N miner enumeration from chain (we currently rely on the user supplying addresses).
+```
+$ filcrate sps catalog --top=20
+  7 SPs probed, 0 speak Mk20
+
+  t0143103 → REDACTED-SP    products timeout
+  t0180698 → 127.0.0.1             products refused
+  t0181521 → temp-calib.devtty.eu  products HTTP 500 (older Curio, returns 500 on auth-fail)
+  t04040   → 10.122.69.25          products timeout (private IP)
+  t0183240 → 192.168.110.99        products timeout (private IP)
+  t0144416 → REDACTED-SP    products timeout
+  t01013   → yablufc.ddns.net      products refused
+```
+
+The catalog correctly reports zero working Mk20 SPs on calibration; this matches the actual current state of calibration deployments. The infrastructure works; the network is just thin.
+
+## What's not done
+
+**Highest priority for V0.3:**
+- **Live Mk20 SP test target** — point at one of Nicklas's calibration nodes (configured to allowlist filcrate's wallet) and exercise the full `store` flow end-to-end.
+- **Filplus auto-allocator** — `--tier=cold --auto-allocate` so the user doesn't need an existing FIL+ allocation. Plug into a known auto-allocator's JSON-RPC.
+- **Mk20 chunked upload** — for files larger than the SP's serial-PUT limit.
+
+**Roadmap:**
+- WebUI (Next.js + local daemon, reuses the filpay theme tokens).
+- Hot-path integration via Synapse SDK or Go reimpl (FoC PDP).
+- f4 / delegated wallet support (EVM-shaped signing).
+- One-line installer (`curl | bash`, modeled on filbucket).
+- Native chain walker (drop the Filfox dependency).
 
 ## Known limitations
 
-- BLS (`f3`) wallets intentionally deferred — would require a CGo dependency on `supranational/blst` and break the single-binary install story.
-- Calibration testnet has many miners that do not run Curio Mk20 yet; the V0 prober surfaces this rather than hiding it.
-- The mainline Curio AuthMiddleware returns 401 on auth-fail; some older deployed builds return 500. We treat both as "unauthenticated" but currently surface the raw status to the user for clarity.
+- BLS (`f3`) wallets deferred — would require CGo `supranational/blst`, breaks the single-binary install story.
+- The SP's response body is bounded to 8 MiB to prevent OOM-on-misbehaving-SP. If the upstream protocol grows larger response shapes, this needs review.
+- Mainline Curio returns 401 on auth-fail; some older deployed builds return 500. We treat both as "unauthenticated" but currently surface the raw status in the prober output for clarity.
+- The dry-run path skips the SP probe entirely, so `store --dry-run` works without network access. The non-dry-run path requires a live SP.
 
 ## How to verify locally
 
 ```bash
 go build ./cmd/filcrate
-./filcrate sps probe-batch t0143103 t0181521 t04040 --network=calibration
+
+# Compute a piece CID
+./filcrate commp ./some-file.bin --json
+
+# Probe a miner
+./filcrate sps probe t0181521
+
+# Batch-probe + persist a calibration catalog
+./filcrate sps catalog --top=20 --out=calib.json
+
+# Build a cold deal envelope without submitting
+./filcrate store ./some-file.bin --provider=f01234 --tier=cold --allocation=42 --dry-run
+
 go test ./...
 ```
-
-Set `--rpc` to a private Glif token URL or your own Lotus to avoid public rate limiting.

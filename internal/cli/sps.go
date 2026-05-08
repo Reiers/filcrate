@@ -33,6 +33,7 @@ func NewSPsCommand() *cobra.Command {
 	}
 	c.AddCommand(newSPsProbeCommand())
 	c.AddCommand(newSPsBatchCommand())
+	addCatalogToSPs(c)
 	return c
 }
 

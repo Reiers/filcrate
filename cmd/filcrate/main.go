@@ -38,6 +38,8 @@ func main() {
 
 	root.AddCommand(
 		cli.NewSPsCommand(),
+		cli.NewCommPCommand(),
+		cli.NewStoreCommand(),
 		cli.NewVersionCommand(),
 	)
 
