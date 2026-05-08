@@ -60,7 +60,7 @@ Of the 7 active calibration miners with raw byte power:
 ## What's not done yet
 
 **Highest priority next:**
-- **Live Mk20 SP target.** Either upgrade one of Nicklas's calibration nodes to Curio with Mk20 enabled, or stand up a fresh Curio on Hetzner specifically for calibration testing.
+- **Dedicated calibration Curio on Hetzner** (or equivalent isolated infra) as the live Mk20 test target. Why not the existing Doctor calibration cluster: tried that on 2026-05-08 and learned that `EnableDealMarket=true` pulls in libp2p multiaddr publishing as a side-effect, which sent two `ChangeMultiaddrs` chain messages against the production miner IDs. Repaired the same session. Hard rules now in `AGENTS.md` to prevent recurrence; the cleanest path forward is a fresh Curio on infra we control with a wallet filcrate generates itself, not a shared keystore.
 - **Filplus auto-allocator integration.** `--auto-allocate` for cold deals so the user doesn't need to pre-arrange DataCap.
 
 **Roadmap:**
