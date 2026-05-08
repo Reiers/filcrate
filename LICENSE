@@ -1,0 +1,17 @@
+Dual-licensed: MIT OR Apache-2.0.
+
+Copyright (c) 2026 TSE Reiersen and contributors.
+
+You may use the contents of this repository under the terms of either of:
+
+  - The MIT License — https://opensource.org/licenses/MIT
+  - The Apache License, Version 2.0 — https://www.apache.org/licenses/LICENSE-2.0
+
+This pattern (the "Permissive License Stack") is the same dual-license used
+across the Filecoin ecosystem (Lotus, Boost, Curio, etc.) so that filcrate
+can interoperate cleanly with any of those codebases.
+
+Some files in this repository are direct ports of protocol-level type
+definitions from `github.com/filecoin-project/curio` (Curio Storage), which
+is itself dual-licensed MIT / Apache-2.0 by Protocol Labs and contributors.
+Where applicable, those file headers retain their original attribution.

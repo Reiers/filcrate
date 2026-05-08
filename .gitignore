@@ -1,0 +1,25 @@
+# Build artifacts
+/filcrate
+/filcrated
+/dist/
+/bin/
+
+# Go
+*.test
+*.out
+coverage.out
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+
+# Local config / secrets
+.env
+.env.local
+*.key
+wallet.bin
+
+# Temp / scratch
+/tmp/
+/scratch/
