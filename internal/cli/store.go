@@ -191,8 +191,20 @@ upload is on the roadmap.`,
 			}
 			defer f.Close()
 			stat, _ := f.Stat()
-			if err := client.UploadSerial(ctx, deal.Identifier, f, stat.Size()); err != nil {
-				return fmt.Errorf("upload: %w", err)
+			// Auto-select serial vs chunked. Anything under 64 MiB uses the
+			// serial path (one PUT, simpler error handling). Larger files go
+			// chunked so we don't depend on the SP buffering hundreds of MiB.
+			const serialThreshold int64 = 64 << 20
+			if stat.Size() <= serialThreshold {
+				if err := client.UploadSerial(ctx, deal.Identifier, f, stat.Size()); err != nil {
+					return fmt.Errorf("upload (serial): %w", err)
+				}
+			} else {
+				fmt.Fprintf(os.Stderr, "  using chunked upload (file > %s)\n", humanSize(uint64(serialThreshold)))
+				if err := client.UploadChunked(ctx, deal.Identifier, f, stat.Size(),
+					&mk20.ChunkedUploadOpts{ChunkSize: 16 << 20, Concurrency: 4}); err != nil {
+					return fmt.Errorf("upload (chunked): %w", err)
+				}
 			}
 			fmt.Fprintln(os.Stderr, "  upload finalized")
 
