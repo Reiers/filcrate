@@ -23,3 +23,6 @@ wallet.bin
 # Temp / scratch
 /tmp/
 /scratch/
+
+# Internal agent operating notes — never track in the public repo
+/AGENTS.md

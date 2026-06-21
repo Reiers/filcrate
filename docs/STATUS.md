@@ -49,8 +49,8 @@ Integration tests against the mock cover the full client surface:
 ### Calibration network state (2026-05-08)
 
 Of the 7 active calibration miners with raw byte power:
-- 2 advertise the `REDACTED-SP` DNS name. The actual Curio binary is at `REDACTED` running v1.27.3-rc1 (Feb 2026), too old for Mk20 — `/market/mk20/products` returns 404.
-- 2 advertise private-IP-only multiaddrs (`10.x` / `192.168.x`).
+- 2 advertise a public DNS name but the backing Curio binary is on an old pre-Mk20 build (v1.27.3-rc1, Feb 2026) — `/market/mk20/products` returns 404.
+- 2 advertise private-IP-only multiaddrs (not publicly reachable).
 - 1 advertises `127.0.0.1`.
 - 1 returns connection-refused on the public DNS name.
 - 1 (`temp-calib.devtty.eu`) reaches the Mk20 endpoint but returns HTTP 500 (older Curio that emits 500 instead of 401 on auth-fail).
